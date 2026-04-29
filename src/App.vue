@@ -62,7 +62,7 @@ const connect = () => {
   let centrifugeConfig
   if (backendUrl) {
     centrifugeConfig = [
-      // { transport: 'websocket', endpoint: "wss://" + backendUrl },
+      { transport: 'websocket', endpoint: "wss://" + backendUrl },
       { transport: 'sse', endpoint: "https://" + backendUrl }
     ]
   } else {

@@ -7,22 +7,13 @@
     </div>
 
     <div class="messages" ref="messagesRef">
-      <div
-        v-for="(msg, index) in messages"
-        :key="index"
-        :class="['message', msg.type]"
-      >
+      <div v-for="(msg, index) in messages" :key="index" :class="['message', msg.type]">
         {{ msg.content }}
       </div>
     </div>
 
     <div class="chat-input">
-      <input
-        v-model="inputText"
-        placeholder="Type a message..."
-        :disabled="!paired"
-        @keydown.enter="sendMessage"
-      />
+      <input v-model="inputText" placeholder="Type a message..." :disabled="!paired" @keydown.enter="sendMessage" />
       <button class="btn" :disabled="!connected" @click="paired ? leavePair() : joinQueue()">
         {{ paired ? 'Leave' : 'Join Chat' }}
       </button>
@@ -57,18 +48,15 @@ const scrollToBottom = async () => {
 }
 
 const connect = () => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL
+  const { VITE_BACKEND_HTTP_URL, VITE_BACKEND_WS_URL } = import.meta.env;
 
-  let centrifugeConfig
-  if (backendUrl) {
-    centrifugeConfig = [
-      { transport: 'websocket', endpoint: "wss://" + backendUrl },
-      { transport: 'sse', endpoint: "https://" + backendUrl }
-    ]
-  } else {
-    centrifugeConfig = '/centrifuge'
-  }
-  centrifuge = new Centrifuge(centrifugeConfig)
+
+  centrifuge = new Centrifuge([
+    { transport: 'websocket', endpoint: VITE_BACKEND_WS_URL },
+    { transport: 'sse', endpoint: VITE_BACKEND_HTTP_URL + "/connection/sse" },
+  ], {
+    emulationEndpoint: VITE_BACKEND_HTTP_URL + "/emulation"
+  })
 
   centrifuge.on('connected', (ctx) => {
     clientId = ctx.client
@@ -175,11 +163,10 @@ onUnmounted(() => {
 .btn-small {
   padding: 4px 10px;
   font-size: 12px;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
 }
+
 .btn-small:hover {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.3);
 }
 </style>
-
-

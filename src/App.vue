@@ -58,7 +58,24 @@ const scrollToBottom = async () => {
 
 const connect = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL
-  centrifuge = new Centrifuge(backendUrl || '/centrifuge')
+
+
+
+
+  const config = backendUrl
+    ? {
+      endpoints: [
+
+
+          { type: 'websocket', endpoint: backendUrl },
+          { type: 'http_polling', endpoint: backendUrl.replace(/^wss:\/\//, 'https://') }
+      ]
+    }
+
+
+
+    : '/centrifuge'
+  centrifuge = new Centrifuge(config)
 
   centrifuge.on('connected', (ctx) => {
     clientId = ctx.client
@@ -171,4 +188,3 @@ onUnmounted(() => {
   background: rgba(255,255,255,0.3);
 }
 </style>
-

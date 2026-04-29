@@ -57,7 +57,8 @@ const scrollToBottom = async () => {
 }
 
 const connect = () => {
-  centrifuge = new Centrifuge('/centrifuge')
+  const backendUrl = import.meta.env.VITE_BACKEND_URL
+  centrifuge = new Centrifuge(backendUrl || '/centrifuge')
 
   centrifuge.on('connected', (ctx) => {
     clientId = ctx.client
@@ -170,3 +171,4 @@ onUnmounted(() => {
   background: rgba(255,255,255,0.3);
 }
 </style>
+

@@ -59,23 +59,16 @@ const scrollToBottom = async () => {
 const connect = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL
 
-
-
-
-  const config = backendUrl
-    ? {
-      endpoints: [
-
-
+  let centrifugeConfig
+  if (backendUrl) {
+    centrifugeConfig = [
           { type: 'websocket', endpoint: backendUrl },
           { type: 'http_polling', endpoint: backendUrl.replace(/^wss:\/\//, 'https://') }
       ]
-    }
-
-
-
-    : '/centrifuge'
-  centrifuge = new Centrifuge(config)
+      } else {
+    centrifugeConfig = '/centrifuge'
+      }
+  centrifuge = new Centrifuge(centrifugeConfig)
 
   centrifuge.on('connected', (ctx) => {
     clientId = ctx.client
@@ -128,8 +121,8 @@ const joinQueue = async () => {
       } else {
         addMessage(res.data.content, 'system')
         statusText.value = 'Waiting...'
-      }
     }
+}
   } catch (err) {
     addMessage(`Error: ${err.message}`, 'system')
   }
@@ -188,3 +181,4 @@ onUnmounted(() => {
   background: rgba(255,255,255,0.3);
 }
 </style>
+

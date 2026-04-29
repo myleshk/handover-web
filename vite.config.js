@@ -4,6 +4,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig(({ command }) => {
   const config = {
     plugins: [vue()],
+    base: '/',
     server: {
       port: 3000,
       proxy: {
@@ -13,11 +14,6 @@ export default defineConfig(({ command }) => {
         }
       }
     }
-  }
-
-  // Set base path for GitHub Pages deployment
-  if (command === 'build') {
-    config.base = '/handover-web/'
   }
 
   return config

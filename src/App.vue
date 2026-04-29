@@ -62,12 +62,12 @@ const connect = () => {
   let centrifugeConfig
   if (backendUrl) {
     centrifugeConfig = [
-          { type: 'websocket', endpoint: backendUrl },
-          { type: 'http_polling', endpoint: backendUrl.replace(/^wss:\/\//, 'https://') }
-      ]
-      } else {
+      // { transport: 'websocket', endpoint: "wss://" + backendUrl },
+      { transport: 'sse', endpoint: "https://" + backendUrl }
+    ]
+  } else {
     centrifugeConfig = '/centrifuge'
-      }
+  }
   centrifuge = new Centrifuge(centrifugeConfig)
 
   centrifuge.on('connected', (ctx) => {
@@ -121,8 +121,8 @@ const joinQueue = async () => {
       } else {
         addMessage(res.data.content, 'system')
         statusText.value = 'Waiting...'
+      }
     }
-}
   } catch (err) {
     addMessage(`Error: ${err.message}`, 'system')
   }
@@ -181,4 +181,5 @@ onUnmounted(() => {
   background: rgba(255,255,255,0.3);
 }
 </style>
+
 

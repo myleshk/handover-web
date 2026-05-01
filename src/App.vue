@@ -1,9 +1,11 @@
 <template>
   <div class="chat-container">
     <div class="chat-header">
-      <h2>Handover Chat</h2>
-      <span class="own-name" v-if="ownName">{{ ownName }}</span>
-      <span class="status">{{ statusText }}</span>
+      <h2 class="header-title">Handover Chat</h2>
+      <span class="status-group" v-if="connected">
+        <span class="status">{{ statusText }}</span>
+        <span class="own-name" v-if="ownName">{{ ownName }}</span>
+      </span>
       <button v-if="connected && paired" class="btn btn-small" @click="rematch">Re-match</button>
     </div>
 
@@ -159,11 +161,20 @@ onUnmounted(() => {
 })
 </script>
 <style scoped>
+.header-title {
+  margin: 0;
+}
+
+.status-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.3;
+}
+
 .own-name {
   font-size: 11px;
   opacity: 0.7;
-  display: block;
-  margin-top: -4px;
 }
 
 .btn-small {

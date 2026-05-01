@@ -2,21 +2,20 @@
   <div class="chat-container">
     <div class="chat-header">
       <h2>Handover Chat</h2>
+      <span class="own-name" v-if="ownName">{{ ownName }}</span>
       <span class="status">{{ statusText }}</span>
-      <button v-if="connected" class="btn btn-small" @click="reset">Reset</button>
+      <button v-if="connected && paired" class="btn btn-small" @click="rematch">Re-match</button>
     </div>
 
     <div class="messages" ref="messagesRef">
       <div v-for="(msg, index) in messages" :key="index" :class="['message', msg.type]">
+        <span v-if="msg.showSender" class="sender">{{ msg.sender }}</span>
         {{ msg.content }}
       </div>
     </div>
 
     <div class="chat-input">
       <input v-model="inputText" placeholder="Type a message..." :disabled="!paired" @keydown.enter="sendMessage" />
-      <button class="btn" :disabled="!connected" @click="paired ? leavePair() : joinQueue()">
-        {{ paired ? 'Leave' : 'Join Chat' }}
-      </button>
     </div>
   </div>
 </template>
@@ -29,14 +28,25 @@ const messages = ref([])
 const inputText = ref('')
 const connected = ref(false)
 const paired = ref(false)
+const ownName = ref('')
+const partnerName = ref('')
 const statusText = ref('Disconnected')
 const messagesRef = ref(null)
 
 let centrifuge = null
 let clientId = null
 
-const addMessage = (content, type = 'system') => {
-  messages.value.push({ content, type })
+const setUnpaired = (reason) => {
+  if (paired.value) {
+    paired.value = false
+    partnerName.value = ''
+    statusText.value = 'Waiting for partner...'
+    addMessage(reason, 'system')
+  }
+}
+
+const addMessage = (content, type = 'system', sender = '') => {
+  messages.value.push({ content, type, sender, showSender: !!sender })
   scrollToBottom()
 }
 
@@ -50,7 +60,6 @@ const scrollToBottom = async () => {
 const connect = () => {
   const { VITE_BACKEND_HTTP_URL, VITE_BACKEND_WS_URL } = import.meta.env;
 
-
   centrifuge = new Centrifuge([
     { transport: 'websocket', endpoint: VITE_BACKEND_WS_URL },
     { transport: 'sse', endpoint: VITE_BACKEND_HTTP_URL + "/connection/sse" },
@@ -61,7 +70,7 @@ const connect = () => {
   centrifuge.on('connected', (ctx) => {
     clientId = ctx.client
     connected.value = true
-    statusText.value = 'Connected'
+    statusText.value = 'Waiting for partner...'
     addMessage('Connected to server', 'system')
     console.log('My ID:', ctx.client)
   })
@@ -69,22 +78,30 @@ const connect = () => {
   centrifuge.on('disconnected', () => {
     connected.value = false
     paired.value = false
+    ownName.value = ''
+    partnerName.value = ''
     statusText.value = 'Disconnected'
     addMessage('Disconnected from server', 'system')
   })
 
   centrifuge.on('publication', (ctx) => {
-    console.log('Publication on', ctx.channel, ':', ctx.data)
     const data = ctx.data
     if (!data) return
-
-    if (data.type === 'paired') {
+    if (data.type === 'name_assigned') {
+      ownName.value = data.name
+    } else if (data.type === 'paired') {
       paired.value = true
+      partnerName.value = data.partnerName || data.partner
       statusText.value = 'Paired'
-      addMessage(`Paired with ${data.partner}`, 'system')
+      addMessage(`Paired with ${data.partnerName || data.partner}`, 'system')
     } else if (data.type === 'chat') {
-      const type = data.from === clientId ? 'self' : 'other'
-      addMessage(data.content, type)
+      if (data.from === clientId) {
+        addMessage(data.content, 'self')
+      } else {
+        addMessage(data.content, 'other', data.name || data.from)
+      }
+    } else if (data.type === 'unpaired') {
+      setUnpaired(data.content)
     } else if (data.type === 'system') {
       addMessage(data.content, 'system')
     }
@@ -97,43 +114,25 @@ const connect = () => {
   centrifuge.connect()
 }
 
-const joinQueue = async () => {
+const rematch = async () => {
   try {
-    const res = await centrifuge.rpc('join')
-    console.log('Join RPC result:', res)
+    paired.value = false
+    partnerName.value = ''
+    statusText.value = 'Re-matching...'
+    const res = await centrifuge.rpc('rematch')
     if (res && res.data) {
-      if (res.data.pair_id) {
+      if (res.data.type === 'paired') {
         paired.value = true
+        partnerName.value = res.data.partnerName || res.data.partner
         statusText.value = 'Paired'
-        addMessage(res.data.content, 'system')
+        addMessage(`Paired with ${res.data.partnerName || res.data.partner}`, 'system')
       } else {
-        addMessage(res.data.content, 'system')
-        statusText.value = 'Waiting...'
+        statusText.value = 'Waiting for partner...'
+        if (res.data.content) {
+          addMessage(res.data.content, 'system')
+        }
       }
     }
-  } catch (err) {
-    addMessage(`Error: ${err.message}`, 'system')
-  }
-}
-
-const leavePair = async () => {
-  try {
-    await centrifuge.rpc('leave')
-    paired.value = false
-    statusText.value = 'Connected'
-    addMessage('Left pair', 'system')
-  } catch (err) {
-    addMessage(`Error: ${err.message}`, 'system')
-  }
-}
-
-const reset = async () => {
-  try {
-    if (paired) await centrifuge.rpc('leave')
-    paired.value = false
-    statusText.value = 'Connected'
-    addMessage('Reset', 'system')
-    messages.value = []
   } catch (err) {
     addMessage(`Error: ${err.message}`, 'system')
   }
@@ -160,6 +159,13 @@ onUnmounted(() => {
 })
 </script>
 <style scoped>
+.own-name {
+  font-size: 11px;
+  opacity: 0.7;
+  display: block;
+  margin-top: -4px;
+}
+
 .btn-small {
   padding: 4px 10px;
   font-size: 12px;
@@ -169,4 +175,13 @@ onUnmounted(() => {
 .btn-small:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+.sender {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  opacity: 0.8;
+}
 </style>
+

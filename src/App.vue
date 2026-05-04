@@ -17,7 +17,12 @@
     </div>
 
     <div class="chat-input">
-      <input v-model="inputText" placeholder="Type a message..." :disabled="!paired" @keydown.enter="sendMessage" />
+      <textarea ref="inputRef" v-model="inputText" placeholder="Type a message..." :disabled="!paired" rows="1" @keydown="onInputKeydown" @input="onInput"></textarea>
+      <button class="btn-send" :disabled="!paired || !inputText.trim()" @click="sendMessage">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
     </div>
   </div>
 </template>
@@ -34,6 +39,7 @@ const ownName = ref('')
 const partnerName = ref('')
 const statusText = ref('Disconnected')
 const messagesRef = ref(null)
+const inputRef = ref(null)
 
 let centrifuge = null
 let clientId = null
@@ -140,11 +146,28 @@ const rematch = async () => {
   }
 }
 
+const onInputKeydown = (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault()
+    sendMessage()
+  }
+}
+
+const onInput = () => {
+  const el = inputRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = el.scrollHeight + 'px'
+}
+
 const sendMessage = async () => {
   if (!inputText.value.trim() || !paired) return
   try {
     await centrifuge.rpc('chat', { content: inputText.value.trim() })
     inputText.value = ''
+    if (inputRef.value) {
+      inputRef.value.style.height = 'auto'
+    }
   } catch (err) {
     addMessage(`Error: ${err.message}`, 'system')
   }
@@ -195,4 +218,3 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 </style>
-

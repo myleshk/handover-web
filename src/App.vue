@@ -65,14 +65,28 @@ const scrollToBottom = async () => {
   }
 }
 
+const getOrCreateDeviceId = () => {
+  const key = 'handover_device_id'
+  let id = localStorage.getItem(key)
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem(key, id)
+  }
+  return id
+}
+
 const connect = () => {
   const { VITE_BACKEND_HTTP_URL, VITE_BACKEND_WS_URL } = import.meta.env;
+
+  const deviceId = getOrCreateDeviceId()
+  console.log('Device ID:', deviceId)
 
   centrifuge = new Centrifuge([
     { transport: 'websocket', endpoint: VITE_BACKEND_WS_URL },
     { transport: 'sse', endpoint: VITE_BACKEND_HTTP_URL + "/connection/sse" },
   ], {
-    emulationEndpoint: VITE_BACKEND_HTTP_URL + "/emulation"
+    emulationEndpoint: VITE_BACKEND_HTTP_URL + "/emulation",
+    token: deviceId,
   })
 
   centrifuge.on('connected', (ctx) => {

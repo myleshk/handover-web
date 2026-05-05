@@ -46,20 +46,20 @@
       <div class="upload-progress-bar" :style="{ width: progress + '%' }"></div>
     </div>
 
-    <form class="chat-input" @submit.prevent="sendMessage">
+    <div class="chat-input">
       <input ref="fileInputRef" type="file" class="file-input-hidden" multiple @change="uploadFile" />
       <button class="btn-attach" :disabled="!paired || uploading" @click="selectFile" title="Attach file">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
           <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
         </svg>
       </button>
-      <textarea ref="inputRef" v-model="inputText" placeholder="Type a message..." :disabled="!paired" rows="1" enterkeyhint="send" @keydown="onInputKeydown" @input="onInput"></textarea>
-      <button class="btn-send" type="submit" :disabled="!paired || !inputText.trim()">
+      <textarea ref="inputRef" v-model="inputText" placeholder="Type a message..." :disabled="!paired" rows="1" @keydown="onInputKeydown" @input="onInput"></textarea>
+      <button class="btn-send" :disabled="!paired || !inputText.trim()" @click="sendMessage">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
           <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
         </svg>
       </button>
-    </form>
+    </div>
   </div>
 </template>
 
@@ -220,10 +220,13 @@ const rematch = async () => {
 }
 
 const onInputKeydown = (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    sendMessage()
-  }
+  if (e.key !== 'Enter') return
+  // Touch devices: Enter = newline, send via the button.
+  if (window.matchMedia('(pointer: coarse)').matches) return
+  // Desktop: modifier+Enter = newline, plain Enter = send.
+  if (e.shiftKey || e.altKey || e.metaKey) return
+  e.preventDefault()
+  sendMessage()
 }
 
 const onInput = () => {

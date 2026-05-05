@@ -251,10 +251,12 @@ const sendMessage = async () => {
 }
 
 const addFileMessage = (data, type) => {
+  // Resolve relative file URLs against the API backend, not the page origin.
+  const url = data.file_url?.startsWith('/') ? backendBaseUrl.value + data.file_url : data.file_url
   messages.value.push({
     type,
     file: true,
-    fileUrl: data.file_url,
+    fileUrl: url,
     fileName: data.content,
     fileSize: data.file_size,
     fileType: data.file_type,

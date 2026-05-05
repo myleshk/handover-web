@@ -345,17 +345,6 @@ const uploadFile = (event) => {
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const resp = JSON.parse(xhr.responseText)
-          if (resp.file_url) {
-            addFileMessage({
-              file_url: resp.file_url,
-              content: resp.file_name,
-              file_size: resp.file_size,
-              file_type: resp.file_type,
-            }, 'self')
-          }
-        } catch (_) {}
         done()
       } else {
         addMessage(`Upload failed: ${file.name}`, 'system')

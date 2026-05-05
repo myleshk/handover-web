@@ -43,7 +43,7 @@
     </div>
 
     <div class="chat-input">
-      <input ref="fileInputRef" type="file" class="file-input-hidden" @change="uploadFile" />
+      <input ref="fileInputRef" type="file" class="file-input-hidden" multiple @change="uploadFile" />
       <button class="btn-attach" :disabled="!paired || uploading" @click="selectFile" title="Attach file">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
           <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
@@ -272,32 +272,36 @@ const selectFile = () => {
 }
 
 const uploadFile = async (event) => {
-  const file = event.target.files?.[0]
-  if (!file || !paired.value) return
+  const files = event.target.files
+  if (!files?.length || !paired.value) return
 
   uploading.value = true
-  try {
-    const baseUrl = backendBaseUrl.value
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('token', deviceToken)
+  const baseUrl = backendBaseUrl.value
+  let errors = 0
+  for (const file of files) {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('token', deviceToken)
 
-    const res = await fetch(`${baseUrl}/upload`, {
-      method: 'POST',
-      body: formData,
-    })
-    if (!res.ok) {
-      const errText = await res.text().catch(() => 'Upload failed')
-      addMessage(`Upload failed: ${errText}`, 'system')
+      const res = await fetch(`${baseUrl}/upload`, {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) {
+        const errText = await res.text().catch(() => 'Upload failed')
+        addMessage(`Upload failed: ${file.name} — ${errText}`, 'system')
+        errors++
+      }
+    } catch (err) {
+      addMessage(`Upload error: ${file.name} — ${err.message}`, 'system')
+      errors++
     }
-  } catch (err) {
-    addMessage(`Upload error: ${err.message}`, 'system')
-  } finally {
-    uploading.value = false
-    // Reset file input so the same file can be re-selected
-    if (fileInputRef.value) {
-      fileInputRef.value.value = ''
-    }
+  }
+  uploading.value = false
+  // Reset file input so the same files can be re-selected
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
   }
 }
 

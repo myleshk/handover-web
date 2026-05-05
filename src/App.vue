@@ -26,7 +26,7 @@
               </span>
             </span>
           </template>
-          <a v-else :href="msg.fileUrl" class="file-link" target="_blank" rel="noopener noreferrer" download>
+          <a v-else :href="msg.fileUrl" class="file-link" download>
             <span class="file-icon">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
@@ -181,6 +181,10 @@ const connect = () => {
       } else {
         addFileMessage(data, 'other')
       }
+    } else if (data.type === 'subscribe') {
+      // Server asks us to subscribe to a channel (used when the pairing
+      // was initiated on a different pod).
+      centrifuge.newSubscription(data.channel).subscribe()
     } else if (data.type === 'unpaired') {
       setUnpaired(data.content)
     } else if (data.type === 'system') {

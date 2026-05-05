@@ -223,8 +223,21 @@ const onInputKeydown = (e) => {
   if (e.key !== 'Enter') return
   // Touch devices: Enter = newline, send via the button.
   if (window.matchMedia('(pointer: coarse)').matches) return
-  // Desktop: modifier+Enter = newline, plain Enter = send.
-  if (e.shiftKey || e.altKey || e.metaKey) return
+
+  if (e.shiftKey || e.altKey || e.metaKey) {
+    e.preventDefault()
+    const el = inputRef.value
+    if (!el) return
+    const start = el.selectionStart
+    const val = inputText.value
+    inputText.value = val.slice(0, start) + '\n' + val.slice(el.selectionEnd)
+    nextTick(() => {
+      el.selectionStart = el.selectionEnd = start + 1
+      onInput()
+    })
+    return
+  }
+
   e.preventDefault()
   sendMessage()
 }

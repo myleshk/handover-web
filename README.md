@@ -6,6 +6,7 @@ Frontend for Handover — a minimal WebSocket chat app that pairs exactly two us
 
 - Instant pairing: Two users are matched automatically
 - Real-time messaging over WebSocket (SSE fallback)
+- File uploads: share arbitrary files with your partner
 - Responsive simple UI
 - GitHub Pages deployment (free!)
 
@@ -32,7 +33,7 @@ npm install
 npm run dev
 ```
 
-The dev server proxies `/centrifuge` requests to `http://localhost:8080` (your backend).
+The dev server proxies `/centrifuge`, `/upload`, and `/files` requests to `http://localhost:8080` (your backend).
 
 Make sure the backend is running:
 

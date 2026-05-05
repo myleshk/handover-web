@@ -10,13 +10,32 @@
     </div>
 
     <div class="messages" ref="messagesRef">
-      <div v-for="(msg, index) in messages" :key="index" :class="['message', msg.type]">
+      <div v-for="(msg, index) in messages" :key="index" :class="['message', msg.type, { 'file-msg': msg.file }]">
         <span v-if="msg.showSender" class="sender">{{ msg.sender }}</span>
-        {{ msg.content }}
+        <template v-if="msg.file">
+          <a :href="msg.fileUrl" class="file-link" target="_blank" rel="noopener noreferrer" download>
+            <span class="file-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+              </svg>
+            </span>
+            <span class="file-info">
+              <span class="file-name">{{ msg.fileName }}</span>
+              <span class="file-meta" v-if="msg.fileSize">{{ formatFileSize(msg.fileSize) }}</span>
+            </span>
+          </a>
+        </template>
+        <template v-else>{{ msg.content }}</template>
       </div>
     </div>
 
     <div class="chat-input">
+      <input ref="fileInputRef" type="file" class="file-input-hidden" @change="uploadFile" />
+      <button class="btn-attach" :disabled="!paired || uploading" @click="selectFile" title="Attach file">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+        </svg>
+      </button>
       <textarea ref="inputRef" v-model="inputText" placeholder="Type a message..." :disabled="!paired" rows="1" @keydown="onInputKeydown" @input="onInput"></textarea>
       <button class="btn-send" :disabled="!paired || !inputText.trim()" @click="sendMessage">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
@@ -28,7 +47,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { Centrifuge } from 'centrifuge'
 
 const messages = ref([])
@@ -40,9 +59,18 @@ const partnerName = ref('')
 const statusText = ref('Disconnected')
 const messagesRef = ref(null)
 const inputRef = ref(null)
+const fileInputRef = ref(null)
+const uploading = ref(false)
 
 let centrifuge = null
 let clientId = null
+let deviceToken = null
+
+// Compute the backend base URL from the Centrifuge HTTP URL
+const backendBaseUrl = computed(() => {
+  const url = import.meta.env.VITE_BACKEND_HTTP_URL || ''
+  return url.replace(/\/centrifuge\/?$/, '')
+})
 
 const setUnpaired = (reason) => {
   if (paired.value) {
@@ -72,6 +100,7 @@ const getOrCreateDeviceId = () => {
     id = crypto.randomUUID()
     localStorage.setItem(key, id)
   }
+  deviceToken = id
   return id
 }
 
@@ -121,6 +150,14 @@ const connect = () => {
         addMessage(data.content, 'self')
       } else {
         addMessage(data.content, 'other', data.name || data.from)
+      }
+    } else if (data.type === 'file') {
+      // File messages use the persistent device token as "from", not
+      // the ephemeral Centrifuge client ID.
+      if (data.from === deviceToken) {
+        addFileMessage(data, 'self')
+      } else {
+        addFileMessage(data, 'other')
       }
     } else if (data.type === 'unpaired') {
       setUnpaired(data.content)
@@ -184,6 +221,66 @@ const sendMessage = async () => {
     }
   } catch (err) {
     addMessage(`Error: ${err.message}`, 'system')
+  }
+}
+
+const addFileMessage = (data, type) => {
+  messages.value.push({
+    type,
+    file: true,
+    fileUrl: data.file_url,
+    fileName: data.content,
+    fileSize: data.file_size,
+    fileType: data.file_type,
+    sender: type === 'other' ? (data.name || data.from) : '',
+    showSender: type === 'other',
+  })
+  scrollToBottom()
+}
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return ''
+  const units = ['B', 'KB', 'MB', 'GB']
+  let i = 0
+  let size = bytes
+  while (size >= 1024 && i < units.length - 1) {
+    size /= 1024
+    i++
+  }
+  return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
+}
+
+const selectFile = () => {
+  fileInputRef.value?.click()
+}
+
+const uploadFile = async (event) => {
+  const file = event.target.files?.[0]
+  if (!file || !paired.value) return
+
+  uploading.value = true
+  try {
+    const baseUrl = backendBaseUrl.value
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('token', deviceToken)
+
+    const res = await fetch(`${baseUrl}/upload`, {
+      method: 'POST',
+      body: formData,
+    })
+    if (!res.ok) {
+      const errText = await res.text().catch(() => 'Upload failed')
+      addMessage(`Upload failed: ${errText}`, 'system')
+    }
+  } catch (err) {
+    addMessage(`Upload error: ${err.message}`, 'system')
+  } finally {
+    uploading.value = false
+    // Reset file input so the same file can be re-selected
+    if (fileInputRef.value) {
+      fileInputRef.value.value = ''
+    }
   }
 }
 

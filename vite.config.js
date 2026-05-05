@@ -11,6 +11,12 @@ export default defineConfig(({ command }) => {
         '/centrifuge': {
           target: 'http://localhost:8080',
           ws: true
+        },
+        '/upload': {
+          target: 'http://localhost:8080'
+        },
+        '/files': {
+          target: 'http://localhost:8080'
         }
       }
     }

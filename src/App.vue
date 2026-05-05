@@ -284,6 +284,7 @@ const uploadFile = (event) => {
   progress.value = 0
 
   const baseUrl = backendBaseUrl.value
+  const maxSize = 50 * 1024 * 1024 // 50 MB
   const total = files.length
   let completed = 0
   let errors = 0
@@ -296,16 +297,33 @@ const uploadFile = (event) => {
     }
   }, 30000)
 
+  const resetInput = () => {
+    clearTimeout(safetyTimer)
+    uploading.value = false
+    progress.value = null
+    if (fileInputRef.value) fileInputRef.value.value = ''
+  }
+
+  // Reject oversized files before uploading.
+  const valid = []
+  for (const f of files) {
+    if (f.size > maxSize) {
+      addMessage(`Skipped: ${f.name} exceeds 50 MB limit`, 'system')
+      errors++
+    } else {
+      valid.push(f)
+    }
+  }
+  if (valid.length === 0) {
+    resetInput()
+    return
+  }
+
   const done = () => {
     completed++
     progress.value = Math.round((completed / total) * 100)
     if (completed < total) return
-    clearTimeout(safetyTimer)
-    uploading.value = false
-    progress.value = null
-    if (fileInputRef.value) {
-      fileInputRef.value.value = ''
-    }
+    resetInput()
   }
 
   for (const file of files) {

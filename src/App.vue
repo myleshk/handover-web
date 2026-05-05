@@ -285,9 +285,25 @@ const uploadFile = (event) => {
 
   const baseUrl = backendBaseUrl.value
   const maxSize = 50 * 1024 * 1024 // 50 MB
-  const total = files.length
+
+  // Filter out oversized files — show a message but don't upload.
+  const valid = []
+  for (const f of files) {
+    if (f.size > maxSize) {
+      addMessage(`Skipped: ${f.name} exceeds 50 MB limit`, 'system')
+    } else {
+      valid.push(f)
+    }
+  }
+  if (valid.length === 0) {
+    uploading.value = false
+    progress.value = null
+    if (fileInputRef.value) fileInputRef.value.value = ''
+    return
+  }
+
+  const total = valid.length
   let completed = 0
-  let errors = 0
 
   // Safety reset: release the button state after 30s no matter what.
   const safetyTimer = setTimeout(() => {
@@ -304,21 +320,6 @@ const uploadFile = (event) => {
     if (fileInputRef.value) fileInputRef.value.value = ''
   }
 
-  // Reject oversized files before uploading.
-  const valid = []
-  for (const f of files) {
-    if (f.size > maxSize) {
-      addMessage(`Skipped: ${f.name} exceeds 50 MB limit`, 'system')
-      errors++
-    } else {
-      valid.push(f)
-    }
-  }
-  if (valid.length === 0) {
-    resetInput()
-    return
-  }
-
   const done = () => {
     completed++
     progress.value = Math.round((completed / total) * 100)
@@ -326,7 +327,7 @@ const uploadFile = (event) => {
     resetInput()
   }
 
-  for (const file of files) {
+  for (const file of valid) {
     const xhr = new XMLHttpRequest()
     const formData = new FormData()
     formData.append('file', file)
@@ -345,14 +346,12 @@ const uploadFile = (event) => {
         done()
       } else {
         addMessage(`Upload failed: ${file.name}`, 'system')
-        errors++
         done()
       }
     }
 
     xhr.onerror = () => {
       addMessage(`Upload error: ${file.name}`, 'system')
-      errors++
       done()
     }
 

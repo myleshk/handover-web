@@ -356,3 +356,16 @@ body {
   display: none;
 }
 
+/* Upload progress bar */
+.upload-progress {
+  height: 3px;
+  background: #e8e8e8;
+}
+
+.upload-progress-bar {
+  height: 100%;
+  background: #1677ff;
+  transition: width 0.2s ease;
+  border-radius: 0 2px 2px 0;
+}
+

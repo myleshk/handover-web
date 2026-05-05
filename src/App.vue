@@ -42,6 +42,10 @@
       </div>
     </div>
 
+    <div v-if="uploading" class="upload-progress">
+      <div class="upload-progress-bar" :style="{ width: progress + '%' }"></div>
+    </div>
+
     <div class="chat-input">
       <input ref="fileInputRef" type="file" class="file-input-hidden" multiple @change="uploadFile" />
       <button class="btn-attach" :disabled="!paired || uploading" @click="selectFile" title="Attach file">
@@ -74,6 +78,7 @@ const messagesRef = ref(null)
 const inputRef = ref(null)
 const fileInputRef = ref(null)
 const uploading = ref(false)
+const progress = ref(null) // 0-100 or null when idle
 
 let centrifuge = null
 let clientId = null
@@ -271,37 +276,70 @@ const selectFile = () => {
   fileInputRef.value?.click()
 }
 
-const uploadFile = async (event) => {
+const uploadFile = (event) => {
   const files = event.target.files
   if (!files?.length || !paired.value) return
 
   uploading.value = true
-  const baseUrl = backendBaseUrl.value
-  let errors = 0
-  for (const file of files) {
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('token', deviceToken)
+  progress.value = 0
 
-      const res = await fetch(`${baseUrl}/upload`, {
-        method: 'POST',
-        body: formData,
-      })
-      if (!res.ok) {
-        const errText = await res.text().catch(() => 'Upload failed')
-        addMessage(`Upload failed: ${file.name} — ${errText}`, 'system')
-        errors++
-      }
-    } catch (err) {
-      addMessage(`Upload error: ${file.name} — ${err.message}`, 'system')
-      errors++
+  const baseUrl = backendBaseUrl.value
+  const total = files.length
+  let completed = 0
+  let errors = 0
+
+  // Safety reset: release the button state after 30s no matter what.
+  const safetyTimer = setTimeout(() => {
+    if (uploading.value) {
+      uploading.value = false
+      progress.value = null
+    }
+  }, 30000)
+
+  const done = () => {
+    completed++
+    progress.value = Math.round((completed / total) * 100)
+    if (completed < total) return
+    clearTimeout(safetyTimer)
+    uploading.value = false
+    progress.value = null
+    if (fileInputRef.value) {
+      fileInputRef.value.value = ''
     }
   }
-  uploading.value = false
-  // Reset file input so the same files can be re-selected
-  if (fileInputRef.value) {
-    fileInputRef.value.value = ''
+
+  for (const file of files) {
+    const xhr = new XMLHttpRequest()
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('token', deviceToken)
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && total > 0) {
+        const fileFraction = e.loaded / e.total
+        const overall = (completed + fileFraction) / total
+        progress.value = Math.round(overall * 100)
+      }
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        done()
+      } else {
+        addMessage(`Upload failed: ${file.name}`, 'system')
+        errors++
+        done()
+      }
+    }
+
+    xhr.onerror = () => {
+      addMessage(`Upload error: ${file.name}`, 'system')
+      errors++
+      done()
+    }
+
+    xhr.open('POST', `${baseUrl}/upload`)
+    xhr.send(formData)
   }
 }
 

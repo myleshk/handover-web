@@ -327,6 +327,47 @@ body {
   opacity: 0.5;
 }
 
+/* Image preview inside messages */
+.file-image {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-image {
+  max-width: 240px;
+  max-height: 240px;
+  border-radius: 8px;
+  display: block;
+  object-fit: cover;
+}
+
+.file-image .file-name {
+  font-weight: 600;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+.file-image .file-meta {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+@media (max-width: 640px) {
+  .preview-image {
+    max-width: 100%;
+    max-height: 200px;
+  }
+
+  .file-image .file-name {
+    max-width: 100%;
+  }
+}
+
 /* Upload button */
 .btn-attach {
   width: 40px;

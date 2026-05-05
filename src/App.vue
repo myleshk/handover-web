@@ -26,6 +26,11 @@
               </span>
             </span>
           </template>
+          <div v-else-if="msg.fileType?.startsWith('image/')" class="file-image" @click="downloadFile(msg.fileUrl, msg.fileName)">
+            <img :src="msg.fileUrl" :alt="msg.fileName" class="preview-image" @load="scrollToBottom" loading="lazy"/>
+            <span class="file-name">{{ msg.fileName }}</span>
+            <span class="file-meta" v-if="msg.fileSize">{{ formatFileSize(msg.fileSize) }}</span>
+          </div>
           <a v-else :href="msg.fileUrl" class="file-link" :download="msg.fileName" @click.prevent="downloadFile(msg.fileUrl, msg.fileName)">
             <span class="file-icon">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">

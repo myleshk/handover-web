@@ -83,6 +83,7 @@ const progress = ref(null) // 0-100 or null when idle
 let centrifuge = null
 let clientId = null
 let deviceToken = null
+let isFirstConnect = true
 
 // Compute the backend base URL from the Centrifuge HTTP URL
 const backendBaseUrl = computed(() => {
@@ -144,7 +145,10 @@ const connect = () => {
     clientId = ctx.client
     connected.value = true
     statusText.value = 'Waiting for partner...'
-    addMessage('Connected to server', 'system')
+    if (isFirstConnect) {
+      addMessage('Connected to server', 'system')
+      isFirstConnect = false
+    }
     console.log('My ID:', ctx.client)
   })
 

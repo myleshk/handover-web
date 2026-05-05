@@ -181,10 +181,6 @@ const connect = () => {
       } else {
         addFileMessage(data, 'other')
       }
-    } else if (data.type === 'subscribe') {
-      // Server asks us to subscribe to a channel (used when the pairing
-      // was initiated on a different pod).
-      centrifuge.newSubscription(data.channel).subscribe()
     } else if (data.type === 'unpaired') {
       setUnpaired(data.content)
     } else if (data.type === 'system') {

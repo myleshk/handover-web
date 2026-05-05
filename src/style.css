@@ -258,7 +258,7 @@ body {
 
 /* File message styles */
 .message.file-msg {
-  padding: 6px;
+  padding: 10px 14px;
 }
 
 .file-link {

@@ -308,6 +308,23 @@ body {
   margin-top: 2px;
 }
 
+/* Recycled (deleted) file state */
+.file-link.recycled {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.45;
+  cursor: default;
+}
+
+.file-link.recycled .file-icon svg {
+  opacity: 0.6;
+}
+
+.file-link.recycled .file-meta {
+  opacity: 0.5;
+}
+
 /* Upload button */
 .btn-attach {
   width: 40px;

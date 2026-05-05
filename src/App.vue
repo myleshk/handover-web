@@ -13,7 +13,20 @@
       <div v-for="(msg, index) in messages" :key="index" :class="['message', msg.type, { 'file-msg': msg.file }]">
         <span v-if="msg.showSender" class="sender">{{ msg.sender }}</span>
         <template v-if="msg.file">
-          <a :href="msg.fileUrl" class="file-link" target="_blank" rel="noopener noreferrer" download>
+          <template v-if="msg.recycled">
+            <span class="file-link recycled">
+              <span class="file-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+              </span>
+              <span class="file-info">
+                <span class="file-name">{{ msg.fileName }}</span>
+                <span class="file-meta">Removed</span>
+              </span>
+            </span>
+          </template>
+          <a v-else :href="msg.fileUrl" class="file-link" target="_blank" rel="noopener noreferrer" download>
             <span class="file-icon">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
@@ -78,6 +91,10 @@ const setUnpaired = (reason) => {
     partnerName.value = ''
     statusText.value = 'Waiting for partner...'
     addMessage(reason, 'system')
+    // Files are deleted on the server when the pair is disbanded.
+    messages.value.forEach(msg => {
+      if (msg.file) msg.recycled = true
+    })
   }
 }
 
